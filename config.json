@@ -1,0 +1,10 @@
+{
+  "port": 8080,
+  "serverName": "Maintenance Server",
+  "maxPlayers": 0,
+  "motd": {
+    "line1": "§c現在メンテナンス中です。",
+    "line2": "§eしばらくしてから再度お試しください。"
+  },
+  "kickMessage": "§cサーバーは現在メンテナンス中です。しばらくしてから再度アクセスしてください。"
+}

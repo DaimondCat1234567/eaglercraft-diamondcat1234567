@@ -2,6 +2,22 @@ const { WebSocketServer } = require('ws');
 const { Jimp, ResizeStrategy } = require('jimp');
 const fs = require('fs');
 const crypto = require('crypto');
+const path = require('path');
+
+// Load configuration file, fallback to defaults if not present
+let config = {};
+try {
+    config = require('./config.json');
+} catch (err) {
+    console.warn("[WARN] config.json not found or invalid, using default settings.");
+}
+
+const PORT = process.env.PORT || config.port || 8080;
+const SERVER_NAME = config.serverName || "Maintenance Server";
+const MAX_PLAYERS = config.maxPlayers || 0;
+const MOTD_LINE1 = config.motd?.line1 || "§cCurrently under maintenance.";
+const MOTD_LINE2 = config.motd?.line2 || "§ePlease check back later.";
+const KICK_MESSAGE = config.kickMessage || "§cThe server is currently under maintenance. Please try again later.";
 
 /**
  * Encodes an integer as a VarInt.
@@ -87,7 +103,6 @@ function buildDisconnectPacket(reason) {
 }
 
 async function bootstrap() {
-    const PORT = process.env.PORT || 8080;
     const wss = new WebSocketServer({ port: PORT });
     const serverUuid = crypto.randomUUID();
 
@@ -108,15 +123,15 @@ async function bootstrap() {
                         data: {
                             cache: true,
                             icon: iconBuffer !== null,
-                            max: 0,
+                            max: MAX_PLAYERS,
                             motd: [
-                                "§c現在メンテナンス中です。", 
-                                "§eしばらくしてから再度お試しください。"
+                                MOTD_LINE1, 
+                                MOTD_LINE2
                             ],
                             online: 0,
                             players: []
                         },
-                        name: "Maintenance Server",
+                        name: SERVER_NAME,
                         secure: false,
                         time: Date.now(),
                         type: "motd",
@@ -137,8 +152,7 @@ async function bootstrap() {
                 } 
                 
                 // Handle actual login attempts
-                const kickMessage = "§cサーバーは現在メンテナンス中です。しばらくしてから再度アクセスしてください。";
-                const disconnectPacket = buildDisconnectPacket(kickMessage);
+                const disconnectPacket = buildDisconnectPacket(KICK_MESSAGE);
                 
                 ws.send(disconnectPacket);
                 ws.close();
