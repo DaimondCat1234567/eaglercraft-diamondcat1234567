@@ -38,6 +38,26 @@ function writeVarInt(val) {
     }
 }
 
+function readVarInt(buf, offset = 0) {
+    let num = 0, bytes = 0;
+    while (true) {
+        const b = buf[offset + bytes];
+        if (b === undefined) throw new Error('varint too short');
+        num |= (b & 0x7f) << (7 * bytes);
+        bytes++;
+        if (!(b & 0x80)) break;
+    }
+    return { value: num >>> 0, bytes };
+}
+
+class PacketReader {
+    constructor(buf) { this.buf = buf; this.pos = 0; }
+    readVarInt() { const { value, bytes } = readVarInt(this.buf, this.pos); this.pos += bytes; return value; }
+    readUInt8() { return this.buf[this.pos++]; }
+    readBytes(n) { const b = this.buf.subarray(this.pos, this.pos + n); this.pos += n; return b; }
+    readString() { const len = this.readVarInt(); return this.readBytes(len).toString('utf8'); }
+}
+
 /**
  * Encodes a string as a VarInt-prefixed UTF-8 byte array.
  * 
@@ -102,6 +122,58 @@ function buildDisconnectPacket(reason) {
     ]);
 }
 
+async function handleLogin(ws, message, session) {
+    try {
+        const reader = new PacketReader(message);
+        const packetId = reader.readVarInt();
+
+        if (packetId === 0x02) {
+            const protocolVersion = reader.readUInt8();
+            const brand = reader.readString();
+            const clientPubKey = reader.readBytes(32);
+            const clientVerifyToken = reader.readBytes(4);
+
+            console.log(`[INFO] Login: protocol=${protocolVersion} brand=${brand}`);
+
+            session.ecdh = crypto.createECDH('prime256v1');
+            session.serverPublicKey = session.ecdh.generateKeys('buffer');
+
+            session.sharedSecret = session.ecdh.computeSecret(clientPubKey);
+            session.aesKey = crypto.createHash('sha256')
+                .update(session.sharedSecret)
+                .digest()
+                .subarray(0, 16);
+            session.stage = 'handshaking';
+
+            const serverHello = buildServerHello(protocolVersion, session.serverPublicKey);
+            ws.send(serverHello);
+        } else {
+            console.log(`[WARN] Unknown packet id ${packetId}`);
+        }
+    } catch (err) {
+        console.error('[ERROR] handshake failed:', err);
+        ws.close();
+    }
+}
+
+
+function buildServerHello(protocolVersion, serverPubKey) {
+    const out = [];
+    out.push(writeVarInt(0x01));
+    out.push(Buffer.from([protocolVersion]));
+    out.push(writeString('EaglercraftX'));
+    out.push(serverPubKey);
+    out.push(crypto.randomBytes(4));
+    return Buffer.concat(out);
+}
+
+
+function aesGcmDecrypt(aesKey, nonce, ciphertext, tag) {
+    const decipher = crypto.createDecipheriv('aes-128-gcm', aesKey, nonce);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+}
+
 let database = {
     players: [],
     nextPlayer: 0
@@ -119,6 +191,13 @@ async function bootstrap() {
             name: `player${database.nextPlayer+1}`,
             id: database.nextPlayer
         })
+        const session = {
+            stage: 'idle',
+            ecdh: null,
+            serverPublicKey: null,
+            sharedSecret: null,
+            aesKey: null
+        }
         const playerId = database.nextPlayer
         database.nextPlayer++
         ws.on('message', async (message) => {
@@ -161,15 +240,9 @@ async function bootstrap() {
                     
                     ws.close();
                     return;
-                } 
-                
-                // Handle actual login attempts
-                /*
-                const disconnectPacket = buildDisconnectPacket(KICK_MESSAGE);
-                
-                ws.send(disconnectPacket);
-                ws.close();
-                */
+                }
+
+                handleLogin(ws, message, session);
                 
             } catch (err) {
                 console.error("[ERROR] Failed to handle incoming message:", err);
