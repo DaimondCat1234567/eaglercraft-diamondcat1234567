@@ -1,16 +1,9 @@
-const { WebSocketServer } = require('ws');
-const { Jimp, ResizeStrategy } = require('jimp');
-const fs = require('fs');
-const crypto = require('crypto');
-const path = require('path');
-
-// Load configuration file, fallback to defaults if not present
-let config = {};
-try {
-    config = require('./config.json');
-} catch (err) {
-    console.warn("[WARN] config.json not found or invalid, using default settings.");
-}
+import { WebSocketServer } from 'ws';
+import { Jimp, ResizeStrategy } from 'jimp';
+import fs from 'fs';
+import crypto from 'crypto';
+import path from 'path';
+import config from './config.cjs';
 
 const PORT = process.env.PORT || config.port || 8080;
 const SERVER_NAME = config.serverName || "Maintenance Server";
@@ -174,6 +167,18 @@ function aesGcmDecrypt(aesKey, nonce, ciphertext, tag) {
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
 
+function decryptEaglerFrame(aesKey, frame) {
+    const reader = new PacketReader(frame);
+    reader.readVarInt();
+    const nonce = reader.readBytes(12);
+    const tag = frame.subarray(frame.length - 16);
+    const ciphertext = frame.subarray(reader.pos, frame.length - 16);
+
+    const decipher = crypto.createDecipheriv('aes-128-gcm', aesKey, nonce);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+}
+
 let database = {
     players: [],
     nextPlayer: 0
@@ -242,8 +247,12 @@ async function bootstrap() {
                     return;
                 }
 
-                handleLogin(ws, message, session);
-                
+                if (session.stage === 'handshaking') {
+                    const plain = decryptEaglerFrame(session.aesKey, message);
+                    handleLogin(ws, plain, session);
+                } else {
+                    handleLogin(ws, message, session);
+                }
             } catch (err) {
                 console.error("[ERROR] Failed to handle incoming message:", err);
                 ws.close();

@@ -2,18 +2,22 @@
   "name": "eagler-maintenance",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "server.ts",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.ts",
     "public": "npx localtunnel --port 8080 --subdomain diamondcat1234567eaglercraft",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "jimp": "^1.6.1",
+    "typescript": "^7.0.2",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
