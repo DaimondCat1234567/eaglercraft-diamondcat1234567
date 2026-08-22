@@ -1,12 +1,4 @@
-# Eaglercraft Maintenance Server
-
-A lightweight Node.js WebSocket server designed to act as a placeholder for EaglercraftX servers during maintenance.
-
-## Features
-- Complete compliance with the Eaglercraft WebSocket protocol.
-- Answers Server List Ping (MOTD requests) with a custom maintenance message.
-- Supports displaying a server icon (`server-icon.png`).
-- Disconnects joining players instantly with a customizable maintenance kick message.
+# Server
 
 ## Setup
 
@@ -21,9 +13,9 @@ A lightweight Node.js WebSocket server designed to act as a placeholder for Eagl
    ```
 
 ## Configuration
-The server runs on port `8080` by default. You can change this by setting the `PORT` environment variable:
+The server runs on port `8080` by default. You can change this by setting the `PORT` environment variable, or `config.json`:
 ```bash
 PORT=3000 node server.js
 ```
 
-You can customize the MOTD and kick messages directly in `server.js`.
+You can customize the MOTD and kick messages directly in `config.json`.
