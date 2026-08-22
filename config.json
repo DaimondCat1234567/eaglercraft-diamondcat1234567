@@ -1,10 +1,10 @@
 {
   "port": 8080,
-  "serverName": "Maintenance Server",
-  "maxPlayers": 0,
+  "serverName": "DiamondCat Server",
+  "maxPlayers": 20,
   "motd": {
-    "line1": "§cCurrently under maintenance.",
-    "line2": "§ePlease check back later!"
+    "line1": "§cWelcome.",
+    "line2": "§eThis is my server"
   },
-  "kickMessage": "§cThe server is currently under maintenance. Please try again later."
+  "kickMessage": "§cCBF Detected, Loser!. Click Between Frames is illegitimate and will not be allowed for use in DiamondCat Server. Please disable the mod to continue playing."
 }
