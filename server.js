@@ -164,10 +164,12 @@ async function bootstrap() {
                 } 
                 
                 // Handle actual login attempts
+                /*
                 const disconnectPacket = buildDisconnectPacket(KICK_MESSAGE);
                 
                 ws.send(disconnectPacket);
                 ws.close();
+                */
                 
             } catch (err) {
                 console.error("[ERROR] Failed to handle incoming message:", err);
