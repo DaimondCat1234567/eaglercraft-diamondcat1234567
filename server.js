@@ -104,7 +104,7 @@ function buildDisconnectPacket(reason) {
 
 let database = {
     players: [],
-    nextPlayer = 0
+    nextPlayer: 0
 }
 
 async function bootstrap() {
