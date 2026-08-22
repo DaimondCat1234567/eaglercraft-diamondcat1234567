@@ -102,13 +102,25 @@ function buildDisconnectPacket(reason) {
     ]);
 }
 
+let database = {
+    players: [],
+    nextPlayer = 0
+}
+
 async function bootstrap() {
     const wss = new WebSocketServer({ port: PORT });
     const serverUuid = crypto.randomUUID();
 
     console.log(`[INFO] Eaglercraft Maintenance Server starting on port ${PORT}...`);
 
-    wss.on('connection', async (ws) => {
+    wss.on('connection', async (ws, req) => {
+        const ip = req.connection.remoteAddress
+        database.players.push({
+            name: `player${database.nextPlayer+1}`,
+            id: database.nextPlayer
+        })
+        const playerId = database.nextPlayer
+        database.nextPlayer++
         ws.on('message', async (message) => {
             try {
                 const payload = message.toString('utf8');
@@ -128,8 +140,8 @@ async function bootstrap() {
                                 MOTD_LINE1, 
                                 MOTD_LINE2
                             ],
-                            online: 0,
-                            players: []
+                            online: database.players.length,
+                            players: database.players
                         },
                         name: SERVER_NAME,
                         secure: false,
